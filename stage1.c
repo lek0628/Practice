@@ -1,141 +1,185 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 
-#define MAX_TRAINING 8
+#define MEMBER_COUNT 3
+#define FIELD_COUNT 8  // 7개 체력 항목 + 닉네임
 
-// 훈련 상태 저장: 'N' = 미실시, 'P' = 통과, 'F' = 실패
-char trainingStatus[MAX_TRAINING] = { 'N','N','N','N','N','N','N','N' };
-
-// 메뉴 문자열 배열 (보너스 조건: 2차원 배열)
-const char *mainMenu[] = {
-    "I. 오디션 관리",
-    "II. 훈련",
-    "III. 데뷔"
+// 밀리웨이즈 멤버 이름과 닉네임
+const char *milliways_members[MEMBER_COUNT][2] = {
+    {"박지연", "jiyeon"},
+    {"Ethan Smith", "ethan"},
+    {"김하늘", "sky"}
 };
 
-const char *trainingMenu[] = {
-    "1. 체력과 지식",
-    "2. 자기관리 및 팀워크",
-    "3. 언어 및 발음",
-    "4. 보컬",
-    "5. 댄스",
-    "6. 비주얼 및 이미지",
-    "7. 연기 및 무대 퍼포먼스",
-    "8. 팬 소통"
+// 체력 항목명
+const char *fitness_fields[7] = {
+    "1마일 러닝 (분)",
+    "100m 스프린트 (초)",
+    "푸시업 30회 (분)",
+    "스쿼트 50회 (분)",
+    "팔굽혀펴기 50회 (분)",
+    "수영 400m (분)",
+    "무게 들기 (배수)"
 };
 
-// ===== 함수 선언 =====
-void showMainMenu();
-void showTrainingMenu();
-void handleTraining(int index);
-int isAllowedTraining(int index);
-int isAllPassedBefore(int index);
-void clearInputBuffer();
+// 체력 데이터 배열: [멤버 수][항목 수 + 닉네임]
+char health_scores[MEMBER_COUNT][FIELD_COUNT][30];
 
-// ===== 메인 함수 =====
-int main() {
-    char input[10];
+// === [A] 체력 상태 입력 함수 ===
+void setHealth() {
+    char input[256];
+    printf("\n=== 체력 상태 입력 ===\n");
 
-    while (1) {
-        showMainMenu();
-        printf("메뉴 선택 (0/Q/q/Enter = 종료): ");
+    for (int i = 0; i < MEMBER_COUNT; i++) {
+        printf("\n[%s (%s)]의 7개 체력 항목 데이터를 입력하세요\n", 
+                milliways_members[i][0], milliways_members[i][1]);
+        printf("형식: 1마일,100m,푸시업,스쿼트,팔굽혀펴기,수영,무게 : ");
+
         fgets(input, sizeof(input), stdin);
+        input[strcspn(input, "\n")] = 0; // 개행 제거
 
-        if (input[0] == '\n' || input[0] == '0' ||
-            tolower(input[0]) == 'q') {
-            printf("프로그램을 종료합니다.\n");
-            break;
+        char *token = strtok(input, ",");
+        int field_index = 0;
+
+        while (token && field_index < 7) {
+            strncpy(health_scores[i][field_index], token, 29);
+            health_scores[i][field_index][29] = '\0';
+            token = strtok(NULL, ",");
+            field_index++;
         }
 
-        switch (input[0]) {
-            case '1':
-                printf(">> 오디션 관리 기능 (미구현)\n");
-                break;
-            case '2':
-                showTrainingMenu();
-                break;
-            case '3':
-                printf(">> 데뷔 기능 (미구현)\n");
-                break;
-            default:
-                printf("잘못된 입력입니다.\n");
-        }
-    }
-
-    return 0;
-}
-
-// ===== 메인 메뉴 출력 =====
-void showMainMenu() {
-    printf("\n========= 프로그램 마그라테아 =========\n");
-    for (int i = 0; i < 3; i++) {
-        printf("%d. %s\n", i + 1, mainMenu[i]);
-    }
-    printf("=====================================\n");
-}
-
-// ===== 훈련 메뉴 출력 및 선택 =====
-void showTrainingMenu() {
-    char input[10];
-
-    while (1) {
-        printf("\n======= 훈련 메뉴 =======\n");
-        for (int i = 0; i < MAX_TRAINING; i++) {
-            printf("%d. %s [%c]\n", i + 1, trainingMenu[i], trainingStatus[i]);
-        }
-        printf("0. 상위 메뉴로\n");
-        printf("=========================\n");
-        printf("훈련을 선택하세요: ");
-        fgets(input, sizeof(input), stdin);
-
-        if (input[0] == '0') return;
-
-        int choice = input[0] - '0';
-        if (choice < 1 || choice > MAX_TRAINING) {
-            printf("잘못된 선택입니다.\n");
+        if (field_index != 7) {
+            printf("❌ 입력 항목이 부족합니다. 다시 시도하세요.\n");
+            i--; // 현재 멤버 다시 입력
             continue;
         }
 
-        if (!isAllowedTraining(choice - 1)) {
-            printf("해당 훈련은 아직 선택할 수 없습니다.\n");
-            continue;
-        }
-
-        if (trainingStatus[choice - 1] == 'P') {
-            printf("이미 통과한 훈련입니다.\n");
-            continue;
-        }
-
-        handleTraining(choice - 1);  // 인덱스 전달
+        // 닉네임 저장
+        strncpy(health_scores[i][7], milliways_members[i][1], 29);
+        health_scores[i][7][29] = '\0';
     }
+
+    printf("\n✅ 모든 체력 데이터를 입력받았습니다.\n");
 }
 
-// ===== 훈련 선택 가능 여부 확인 =====
-int isAllowedTraining(int index) {
-    if (index == 0) return 1; // 첫 번째는 언제나 허용
-    return (trainingStatus[index - 1] == 'P');
-}
+// === [B] 체력 상태 조회 함수 ===
+void getHealth() {
+    char input[50];
+    printf("\n=== 체력 상태 조회 ===\n");
+    printf("특정 멤버 닉네임 입력 (전체 조회는 ENTER): ");
+    fgets(input, sizeof(input), stdin);
+    input[strcspn(input, "\n")] = 0;
 
-// ===== 훈련 진행 처리 =====
-void handleTraining(int index) {
-    char answer[10];
-
-    printf(">> [%s] 평가 결과를 입력하시겠습니까? (Y/N): ", trainingMenu[index]);
-    fgets(answer, sizeof(answer), stdin);
-
-    if (tolower(answer[0]) == 'y') {
-        printf("훈련을 마치고 인증에 통과했나요? (P/F): ");
-        fgets(answer, sizeof(answer), stdin);
-
-        if (toupper(answer[0]) == 'P' || toupper(answer[0]) == 'F') {
-            trainingStatus[index] = toupper(answer[0]);
-            printf("결과가 저장되었습니다.\n");
-        } else {
-            printf("잘못된 입력입니다. 훈련 메뉴로 돌아갑니다.\n");
+    if (strlen(input) == 0) {
+        // 전체 출력
+        for (int i = 0; i < MEMBER_COUNT; i++) {
+            printf("\n[%s (%s)]\n", milliways_members[i][0], milliways_members[i][1]);
+            for (int j = 0; j < 7; j++) {
+                printf("%s: %s\n", fitness_fields[j], health_scores[i][j]);
+            }
         }
     } else {
-        printf("훈련 메뉴로 돌아갑니다.\n");
+        // 특정 닉네임 출력
+        int found = 0;
+        for (int i = 0; i < MEMBER_COUNT; i++) {
+            if (strcmp(health_scores[i][7], input) == 0) {
+                found = 1;
+                printf("\n[%s (%s)] 체력 상태\n", milliways_members[i][0], input);
+                for (int j = 0; j < 7; j++) {
+                    printf("%s: %s\n", fitness_fields[j], health_scores[i][j]);
+                }
+                break;
+            }
+        }
+
+        if (!found) {
+            printf("❌ 해당 닉네임의 데이터를 찾을 수 없습니다.\n");
+        }
     }
+}
+
+// === [1-1] 체력과 지식 메뉴 ===
+void fitnessMenu() {
+    char choice[10];
+    while (1) {
+        printf("\n[훈련 > 1. 체력과 지식]\n");
+        printf("A. 체력 상태 입력\n");
+        printf("B. 체력 상태 조회\n");
+        printf("0. 이전 메뉴로\n");
+        printf("선택: ");
+        fgets(choice, sizeof(choice), stdin);
+
+        switch (toupper(choice[0])) {
+            case 'A': setHealth(); break;
+            case 'B': getHealth(); break;
+            case '0': return;
+            default: printf("❌ 올바른 메뉴를 선택하세요.\n");
+        }
+    }
+}
+
+// === [II] 훈련 메뉴 ===
+void trainingMenu() {
+    char choice[10];
+    while (1) {
+        printf("\n[II. 훈련 메뉴]\n");
+        printf("1. 체력과 지식\n");
+        printf("0. 이전 메뉴로\n");
+        printf("선택: ");
+        fgets(choice, sizeof(choice), stdin);
+
+        switch (choice[0]) {
+            case '1': fitnessMenu(); break;
+            case '0': return;
+            default: printf("❌ 유효한 메뉴 번호를 선택하세요.\n");
+        }
+    }
+}
+
+// === [I] 오디션 관리 메뉴 (임시) ===
+void auditionMenu() {
+    printf("\n[오디션 관리 기능은 아직 구현되지 않았습니다.]\n");
+}
+
+// === [III] 데뷔 메뉴 (임시) ===
+void debutMenu() {
+    printf("\n[데뷔 기능은 아직 구현되지 않았습니다.]\n");
+}
+
+// === [Main] 주 메뉴 ===
+void mainMenu() {
+    char choice[10];
+
+    while (1) {
+        printf("\n====== 마그라테아 ======\n");
+        printf("I. 오디션 관리\n");
+        printf("II. 훈련\n");
+        printf("III. 데뷔\n");
+        printf("Q. 종료\n");
+        printf("========================\n");
+        printf("메뉴를 선택하세요: ");
+
+        fgets(choice, sizeof(choice), stdin);
+        switch (toupper(choice[0])) {
+            case 'I': auditionMenu(); break;
+            case 'I' - 'A' + '1': auditionMenu(); break;
+            case 'I' - 'A' + '2': trainingMenu(); break;
+            case 'I' - 'A' + '3': debutMenu(); break;
+            case '1': auditionMenu(); break;
+            case '2': trainingMenu(); break;
+            case '3': debutMenu(); break;
+            case 'Q': case 'q': case '0':
+                printf("👋 프로그램을 종료합니다.\n");
+                return;
+            default: printf("❌ 올바른 메뉴를 선택하세요.\n");
+        }
+    }
+}
+
+// === 진입점 ===
+int main() {
+    mainMenu();
+    return 0;
 }
