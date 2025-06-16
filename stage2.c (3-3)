@@ -1,0 +1,287 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+#include <ctype.h>
+
+#define MAX_MEMBERS 10
+#define MAX_QUESTIONS 5
+#define MAX_SESSIONS 30
+#define MAX_ANSWER_LEN 101
+
+typedef struct {
+  char nickname[20];
+  int age;
+  char trauma[100];
+} TraumaInfo;
+
+typedef struct {
+  int id;
+  char content[100];
+} Question;
+
+typedef struct {
+  char nickname[20];
+  char question[100];
+  char answer[MAX_ANSWER_LEN];
+} CounselingSession;
+
+typedef struct {
+  char keyword[20];
+  char message[300];
+} EasterEgg;
+
+TraumaInfo members[MAX_MEMBERS] = {
+  {"Nova", 20, ""},
+  {"Echo", 22, ""},
+  {"Vega", 19, ""},
+  {"Lumen", 21, ""},
+  {"Orion", 23, ""}
+};
+int member_count = 5;
+
+const Question questions[MAX_QUESTIONS] = {
+  {1, "어떤 상황에서 그 트라우마를 경험하셨나요?"},
+  {2, "해당 상황이 어떻게 당신의 일상생활과 감정에 어떤 영향을 미치고 있는지 말씀해주세요."},
+  {3, "이 트라우마를 어떻게 극복하려고 노력하셨나요?"},
+  {4, "트라우마와 관련하여 어떤 감정을 느끼고 계신가요?"},
+  {5, "트라우마를 극복하기 위해 어떤 지원이 필요한 것으로 생각하시나요?"}
+};
+
+CounselingSession sessions[MAX_SESSIONS];
+int session_count = 0;
+
+EasterEgg arthur_secret = {
+  "specter",
+  "나는 고백한다. 대학 졸업 후 스타트업 창업이라는 허세에 빠져 치기 어린 행동으로 친구들의 앞길을 막았다. "
+  "나는 나의 아이디어가 설득되는 사람이 나 뿐일 때 파괴적인 결과를 보게 된다는 것을 뼈저리게 경험했다. "
+  "과거의 아서는 독선과 아집의 망령이다."
+};
+
+int
+findMemberIndex(const char *nickname)
+{
+  for (int i = 0; i < member_count; i++)
+    if (strcasecmp(members[i].nickname, nickname) == 0)
+      return i;
+  return -1;
+}
+
+void
+showTraumaSubMenu()
+{
+  printf("\n[트라우마 관리 메뉴]\n");
+  printf("1. 트라우마 입력\n");
+  printf("2. 상담 세션 시작\n");
+  printf("3. 종료\n");
+  printf("선택: ");
+}
+
+void
+inputTrauma()
+{
+  char nickname[20];
+  while (1)
+    {
+      printf("닉네임 입력 (종료하려면 q 입력): ");
+      scanf("%s", nickname);
+      if (strcasecmp(nickname, "q") == 0)
+        break;
+
+      int idx = findMemberIndex(nickname);
+      idx >= 0
+        ? (printf("트라우마 내용 입력: "),
+           getchar(),
+           fgets(members[idx].trauma, sizeof(members[idx].trauma), stdin),
+           strtok(members[idx].trauma, "\n"))
+        : printf("존재하지 않는 닉네임입니다.\n");
+    }
+}
+
+void
+startCounselingSession()
+{
+  printf("\n[상담 가능한 멤버 목록]\n");
+  for (int i = 0; i < member_count; i++)
+    if (strlen(members[i].trauma) > 0)
+      printf("- %s\n", members[i].nickname);
+
+  char nickname[20];
+  printf("상담할 멤버의 닉네임 입력: ");
+  scanf("%s", nickname);
+
+  int idx = findMemberIndex(nickname);
+  if (idx < 0 || strlen(members[idx].trauma) == 0)
+    {
+      printf("해당 멤버는 존재하지 않거나 트라우마가 등록되지 않았습니다.\n");
+      return;
+    }
+
+  srand((unsigned int)time(NULL));
+  for (int i = 0; i < 3; i++)
+    {
+      int qIdx = rand() % MAX_QUESTIONS;
+      printf("Q%d: %s\n", questions[qIdx].id, questions[qIdx].content);
+      printf("답변 입력 (최대 100자): ");
+
+      getchar();
+      char buffer[MAX_ANSWER_LEN];
+      fgets(buffer, MAX_ANSWER_LEN, stdin);
+      strtok(buffer, "\n");
+
+      if (strlen(buffer) == 0 || strlen(buffer) >= MAX_ANSWER_LEN - 1)
+        {
+          printf("잘못된 입력입니다. 다시 입력해주세요.\n");
+          i--;
+          continue;
+        }
+
+      CounselingSession *s = &sessions[session_count++];
+      strcpy(s->nickname, nickname);
+      strcpy(s->question, questions[qIdx].content);
+      strcpy(s->answer, buffer);
+    }
+}
+
+void
+printCounselingResults()
+{
+  char nickname[20];
+  printf("닉네임을 입력해 상담 내역 확인: ");
+  scanf("%s", nickname);
+
+  int idx = findMemberIndex(nickname);
+  if (idx < 0)
+    {
+      printf("해당 멤버가 존재하지 않습니다.\n");
+      return;
+    }
+
+  printf("닉네임: %s\n", members[idx].nickname);
+  printf("트라우마: %s\n", members[idx].trauma);
+
+  for (int i = 0; i < session_count; i++)
+    if (strcmp(sessions[i].nickname, nickname) == 0)
+      {
+        printf("\nQ: %s\n", sessions[i].question);
+        printf("A: %s\n", sessions[i].answer);
+      }
+}
+
+int
+isRightChar(char actual, char input)
+{
+  return actual == input;
+}
+
+int
+isEasterEgg(char *input)
+{
+  return strcmp(input, arthur_secret.keyword) == 0;
+}
+
+void
+find_easter_egg()
+{
+  char binary[8];
+  char input[10];
+  char keyword[] = "specter";
+  int len = strlen(keyword);
+
+  printf("\n<<아서의 이스터에그>>\n");
+  printf("[아래는 keyword의 각 문자들을 8비트 이진수로 변환한 후 역순으로 출력한 것입니다.]\n");
+  for (int i = len - 1; i >= 0; i--)
+    {
+      for (int j = 7; j >= 0; j--)
+        {
+          binary[j] = (keyword[i] & 1) ? '1' : '0';
+          keyword[i] >>= 1;
+        }
+      binary[8] = '\0';
+      printf("%s\n", binary);
+    }
+
+  printf("\n각 이진수에 해당하는 글자를 입력하세요 (역순으로 %d자): ", len);
+  scanf("%s", input);
+
+  int correct = 1;
+  for (int i = 0; i < len; i++)
+    if (!isRightChar("specter"[len - 1 - i], input[i]))
+      correct = 0;
+
+  if (correct)
+    {
+      char word[20];
+      printf("모은 글자를 조합해 단어를 입력하세요: ");
+      scanf("%s", word);
+
+      if (isEasterEgg(word))
+        {
+          printf("\n##이스터에그 발견!$$\n");
+          printf("%s\n", arthur_secret.message);
+        }
+      else
+        {
+          printf("일치하지 않는 단어입니다.\n");
+        }
+    }
+  else
+    {
+      printf("문자가 틀렸습니다. 다시 시도하세요.\n");
+    }
+}
+
+void
+overcomeTrauma()
+{
+  char choice;
+  do
+    {
+      showTraumaSubMenu();
+      scanf(" %c", &choice);
+      switch (tolower(choice))
+        {
+        case '1':
+          inputTrauma();
+          break;
+        case '2':
+          startCounselingSession();
+          printCounselingResults();
+          break;
+        case '3':
+          printf("트라우마 관리 종료\n");
+          break;
+        default:
+          printf("잘못된 선택입니다.\n");
+        }
+    }
+  while (tolower(choice) != '3');
+}
+
+void
+mainMenu()
+{
+  char input[20];
+  while (1)
+    {
+      printf("\n[II. 훈련 > 2. 자기관리와 팀워크]\n");
+      printf("A. 트라우마 관리\n");
+      printf("또는 'Arthur' 입력 시 이스터에그\n");
+      printf("선택: ");
+      scanf("%s", input);
+
+      if (strcasecmp(input, "A") == 0)
+        overcomeTrauma();
+      else if (strcasecmp(input, "Arthur") == 0)
+        find_easter_egg();
+      else
+        printf("잘못된 입력입니다.\n");
+    }
+}
+
+int
+main()
+{
+  mainMenu();
+  return 0;
+}
