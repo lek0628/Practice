@@ -1,0 +1,285 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <time.h>
+
+#define MAX_MEMBERS 10
+#define MAX_QUESTIONS 5
+#define MAX_SESSIONS 30
+#define MAX_INPUT 101
+
+/* 구조체 정의 */
+typedef struct {
+    char nickname[20];
+    int age;
+    char trauma[100];
+} Trauma;
+
+typedef struct {
+    int id;
+    char content[100];
+} Question;
+
+typedef struct {
+    char nickname[20];
+    char question[100];
+    char answer[100];
+} Counseling;
+
+/* 전역 변수 */
+Trauma members[MAX_MEMBERS] = {
+    {"Aria", 22, ""},
+    {"Juno", 23, ""},
+    {"Echo", 21, ""},
+    {"Sage", 24, ""},
+    {"Nova", 20, ""}
+};
+
+Question questions[MAX_QUESTIONS] = {
+    {1, "어떤 상황에서 그 트라우마를 경험하셨나요?"},
+    {2, "해당 상황이 당신의 일상과 감정에 어떤 영향을 미치고 있나요?"},
+    {3, "이 트라우마를 어떻게 극복하려고 노력하셨나요?"},
+    {4, "트라우마와 관련하여 어떤 감정을 느끼고 계신가요?"},
+    {5, "트라우마를 극복하기 위해 어떤 지원이 필요하다고 생각하시나요?"}
+};
+
+Counseling sessions[MAX_SESSIONS];
+int session_count = 0;
+
+/* 함수 선언 */
+void overcomeTrauma(void);
+void showSubMenu(void);
+void inputTrauma(void);
+void startCounselingSession(void);
+void viewCounselingResults(void);
+int findMemberIndex(const char *);
+int getLine(char *, int);
+void toLowerStr(char *);
+
+/* 메인 */
+int
+main(void)
+{
+    char choice[10];
+
+    while (1)
+    {
+        printf("\n[II. 훈련 > 2. 자기관리와 팀워크 > B. 트라우마 관리]\n");
+        printf("1. 트라우마 관리 기능 실행\n");
+        printf("Q. 종료\n");
+        printf("선택: ");
+        getLine(choice, sizeof(choice));
+        toLowerStr(choice);
+
+        if (strcmp(choice, "1") == 0)
+            overcomeTrauma();
+        else if (strcmp(choice, "q") == 0)
+            break;
+        else
+            printf("잘못된 입력입니다.\n");
+    }
+
+    return 0;
+}
+
+/* 트라우마 관리 메인 함수 */
+void
+overcomeTrauma(void)
+{
+    char choice[10];
+
+    while (1)
+    {
+        showSubMenu();
+        getLine(choice, sizeof(choice));
+        toLowerStr(choice);
+
+        if (strcmp(choice, "a") == 0)
+            inputTrauma();
+        else if (strcmp(choice, "b") == 0)
+            startCounselingSession();
+        else if (strcmp(choice, "q") == 0)
+            break;
+        else
+            printf("유효하지 않은 선택입니다.\n");
+    }
+}
+
+/* 하위 메뉴 표시 */
+void
+showSubMenu(void)
+{
+    printf("\n== 트라우마 관리 하위 메뉴 ==\n");
+    printf("A. 트라우마 입력\n");
+    printf("B. 상담 세션 시작\n");
+    printf("Q. 돌아가기\n");
+    printf("선택: ");
+}
+
+/* 트라우마 입력 */
+void
+inputTrauma(void)
+{
+    char nickname[20];
+    char trauma[100];
+    int index;
+    char again[10];
+
+    do
+    {
+        printf("\n닉네임 입력: ");
+        getLine(nickname, sizeof(nickname));
+        index = findMemberIndex(nickname);
+
+        index != -1
+            ? (printf("트라우마 내용 입력: "), getLine(trauma, sizeof(trauma)), strncpy(members[index].trauma, trauma, sizeof(members[index].trauma)))
+            : printf("해당 닉네임을 가진 멤버가 존재하지 않습니다.\n");
+
+        printf("계속 입력하시겠습니까? (Y/N): ");
+        getLine(again, sizeof(again));
+        toLowerStr(again);
+    } while (strcmp(again, "y") == 0);
+}
+
+/* 상담 세션 시작 */
+void
+startCounselingSession(void)
+{
+    char nickname[20];
+    int index, i, asked[3];
+    char answer[100];
+
+    printf("\n[트라우마 입력이 완료된 멤버 목록]\n");
+    for (i = 0; i < MAX_MEMBERS; i++)
+    {
+        if (strlen(members[i].trauma) > 0)
+            printf("- %s\n", members[i].nickname);
+    }
+
+    printf("상담할 멤버 닉네임 입력: ");
+    getLine(nickname, sizeof(nickname));
+    index = findMemberIndex(nickname);
+
+    if (index == -1 || strlen(members[index].trauma) == 0)
+    {
+        printf("상담을 시작할 수 없습니다. 유효한 닉네임을 입력하세요.\n");
+        return;
+    }
+
+    srand((unsigned int)time(NULL));
+    for (i = 0; i < 3;)
+    {
+        int q = rand() % MAX_QUESTIONS;
+        int duplicate = 0;
+        for (int j = 0; j < i; j++)
+        {
+            if (asked[j] == q)
+            {
+                duplicate = 1;
+                break;
+            }
+        }
+        if (duplicate)
+            continue;
+
+        asked[i] = q;
+        printf("\nQ%d: %s\n", questions[q].id, questions[q].content);
+
+        while (1)
+        {
+            printf("답변: ");
+            getLine(answer, sizeof(answer));
+
+            if (strlen(answer) == 0 || strlen(answer) > 100)
+                printf("답변은 1~100자 이내여야 합니다. 다시 입력하세요.\n");
+            else
+                break;
+        }
+
+        strncpy(sessions[session_count].nickname, nickname, sizeof(sessions[session_count].nickname));
+        strncpy(sessions[session_count].question, questions[q].content, sizeof(sessions[session_count].question));
+        strncpy(sessions[session_count].answer, answer, sizeof(sessions[session_count].answer));
+        session_count++;
+        i++;
+    }
+
+    viewCounselingResults();
+}
+
+/* 상담 결과 보기 */
+void
+viewCounselingResults(void)
+{
+    char nickname[20];
+    int i, printed = 0;
+
+    printf("\n[상담 결과 열람 가능 닉네임]\n");
+    for (i = 0; i < session_count; i++)
+    {
+        int found = 0;
+        for (int j = 0; j < i; j++)
+        {
+            if (strcmp(sessions[i].nickname, sessions[j].nickname) == 0)
+                found = 1;
+        }
+        if (!found)
+            printf("- %s\n", sessions[i].nickname);
+    }
+
+    printf("열람할 닉네임 입력: ");
+    getLine(nickname, sizeof(nickname));
+
+    for (i = 0; i < session_count; i++)
+    {
+        if (strcmp(sessions[i].nickname, nickname) == 0)
+        {
+            if (!printed)
+            {
+                int idx = findMemberIndex(nickname);
+                printf("\n[%s님의 트라우마 및 상담 내용]\n", nickname);
+                printf("트라우마: %s\n", members[idx].trauma);
+                printed = 1;
+            }
+            printf("질문: %s\n", sessions[i].question);
+            printf("답변: %s\n", sessions[i].answer);
+        }
+    }
+
+    if (!printed)
+        printf("상담 데이터가 없습니다.\n");
+}
+
+/* 멤버 닉네임 검색 */
+int
+findMemberIndex(const char *nickname)
+{
+    int i;
+    for (i = 0; i < MAX_MEMBERS; i++)
+    {
+        if (strcmp(members[i].nickname, nickname) == 0)
+            return i;
+    }
+    return -1;
+}
+
+/* 한 줄 입력 받기 */
+int
+getLine(char *buffer, int size)
+{
+    if (fgets(buffer, size, stdin))
+    {
+        buffer[strcspn(buffer, "\n")] = '\0';
+        return 1;
+    }
+    return 0;
+}
+
+/* 소문자 변환 */
+void
+toLowerStr(char *str)
+{
+    int i;
+    for (i = 0; str[i]; i++)
+        str[i] = (char)tolower(str[i]);
+}
